@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+import time
 
 from rich.console import Console
 from rich.live import Live
@@ -30,11 +31,16 @@ def main():
     console = Console()
     
     try:
-        with Live(pager.render(), refresh_per_second=4, screen=True, console=console) as live:
+        # Use a lower refresh rate to reduce flickering
+        with Live(pager.render(), refresh_per_second=2, screen=True, console=console) as live:
             with InputHandler() as input_handler:
+                # Give initial render time to settle
+                time.sleep(0.1)
+                live.update(pager.render())
+                
                 while True:
                     try:
-                        key = input_handler.get_key(timeout=0.1)
+                        key = input_handler.get_key(timeout=0.2)
                         
                         if key is None:
                             continue
@@ -60,7 +66,7 @@ def main():
                         elif key in ['\n', '\r', ' ']:  # Enter or Space
                             pager.toggle_expansion()
                         
-                        # Update display
+                        # Update display after any key press
                         live.update(pager.render())
                         
                     except KeyboardInterrupt:

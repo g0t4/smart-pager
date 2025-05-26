@@ -10,7 +10,6 @@ from rich.console import Console
 from rich.syntax import Syntax
 from rich.text import Text
 from rich.panel import Panel
-from rich.live import Live
 from rich.layout import Layout
 from rich import box
 
@@ -25,10 +24,19 @@ class SmartPager:
         self.current_line = 0
         self.scroll_offset = 0
         self.expanded_line = None  # Track which line is expanded
-        self.terminal_height = self.console.size.height - 4  # Leave room for status and borders
         
-        # Load file
+        # Load file first
         self._load_file()
+        
+        # Calculate terminal height after loading, and be more conservative
+        self._update_terminal_size()
+        
+    def _update_terminal_size(self):
+        """Update terminal size calculations."""
+        console_size = self.console.size
+        # Be more conservative with height calculation
+        # Account for panel borders (2), status line (1), and some buffer (2)
+        self.terminal_height = max(5, console_size.height - 5)
         
     def _load_file(self):
         """Load file content into memory."""
@@ -124,7 +132,8 @@ class SmartPager:
             
         if is_json:
             # Colorize JSON
-            text.append(self._colorize_json(line))
+            colored_json = self._colorize_json(line)
+            text.append(colored_json)
         elif looks_like_json:
             # Invalid JSON that looks like JSON
             text.append("⚠ ", style="red")
@@ -138,7 +147,7 @@ class SmartPager:
             
         return text
     
-    def _get_expanded_json(self, line: str) -> Optional[Text]:
+    def _get_expanded_json(self, line: str) -> Optional[str]:
         """Get pretty-printed JSON for a line."""
         is_json, parsed_json = self._is_json_line(line)
         if not is_json:
@@ -146,7 +155,7 @@ class SmartPager:
             
         try:
             pretty_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
-            return Text(pretty_json, style="bright_cyan")
+            return pretty_json
         except:
             return None
     
@@ -169,33 +178,40 @@ class SmartPager:
     
     def _render_content(self) -> Panel:
         """Render the main content panel."""
+        # Update terminal size in case it changed
+        self._update_terminal_size()
         self._update_scroll_offset()
         
-        content = Text()
+        content_lines = []
         visible_lines = self._get_visible_lines()
         
-        for i, (line_num, line) in enumerate(visible_lines):
-            if i > 0:
-                content.append("\n")
-                
+        for line_num, line in visible_lines:
             formatted_line = self._format_line(line_num, line)
-            content.append(formatted_line)
+            content_lines.append(formatted_line)
             
             # Show expanded JSON if this line is expanded
             if (self.expanded_line == line_num and 
                 line_num == self.current_line):
                 expanded = self._get_expanded_json(line)
                 if expanded:
-                    content.append("\n")
-                    # Indent the expanded JSON
-                    for exp_line in expanded.plain.split("\n"):
-                        content.append("    " + exp_line + "\n", style="bright_cyan")
+                    # Add each line of expanded JSON with indentation
+                    for exp_line in expanded.split("\n"):
+                        indent_line = Text("    " + exp_line, style="bright_cyan")
+                        content_lines.append(indent_line)
+        
+        # Join all content with newlines
+        content = Text()
+        for i, line in enumerate(content_lines):
+            if i > 0:
+                content.append("\n")
+            content.append(line)
         
         return Panel(
             content,
             title=f"Smart Pager - {Path(self.filename).name}",
             box=box.ROUNDED,
-            title_align="left"
+            title_align="left",
+            height=self.terminal_height + 2  # +2 for panel borders
         )
     
     def _render_status(self) -> Text:
@@ -279,11 +295,11 @@ class SmartPager:
             self.current_line = clicked_line
             self.expanded_line = None
     
-    def render(self) -> Layout:
+    def render(self):
         """Render the complete interface."""
         layout = Layout()
         layout.split_column(
-            Layout(self._render_content(), name="main", ratio=10),
+            Layout(self._render_content(), name="main"),
             Layout(self._render_status(), name="status", size=1)
         )
         return layout
