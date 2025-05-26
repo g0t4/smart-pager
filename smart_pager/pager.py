@@ -2,6 +2,7 @@
 
 import json
 import sys
+import re
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -37,24 +38,51 @@ class SmartPager:
         except Exception as e:
             self.console.print(f"Error reading file: {e}", style="red")
             sys.exit(1)
-            
+    
+    def _extract_json_from_line(self, line: str) -> Optional[str]:
+        """Extract JSON portion from a line that might have other text."""
+        line = line.strip()
+        
+        # Look for JSON starting with { or [
+        json_match = re.search(r'[{\[].*[}\]]', line)
+        if json_match:
+            return json_match.group(0)
+        return None
+    
     def _is_json_line(self, line: str) -> Tuple[bool, Optional[dict]]:
         """Check if line contains valid JSON."""
-        line = line.strip()
-        if not line or not (line.startswith('{') or line.startswith('[')):
-            return False, None
-            
-        try:
-            parsed = json.loads(line)
-            return True, parsed
-        except (json.JSONDecodeError, ValueError):
-            return False, None
+        # First try the whole line
+        line_stripped = line.strip()
+        if line_stripped.startswith(('{', '[')):
+            try:
+                parsed = json.loads(line_stripped)
+                return True, parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        # Try to extract JSON from within the line
+        json_part = self._extract_json_from_line(line)
+        if json_part:
+            try:
+                parsed = json.loads(json_part)
+                return True, parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+                
+        return False, None
             
     def _looks_like_json(self, line: str) -> bool:
         """Check if line looks like JSON but might be invalid."""
-        line = line.strip()
-        return bool(line and (line.startswith('{') or line.startswith('[')) and 
-                   ('"' in line or "'" in line))
+        # Look for JSON-like patterns anywhere in the line
+        json_part = self._extract_json_from_line(line)
+        if json_part and ('"' in json_part or "'" in json_part):
+            # Try to parse it - if it fails but looks like JSON, return True
+            try:
+                json.loads(json_part)
+                return False  # It's actually valid JSON
+            except (json.JSONDecodeError, ValueError):
+                return True  # Invalid but looks like JSON
+        return False
     
     def _colorize_json(self, line: str) -> Text:
         """Simple JSON colorization."""
@@ -62,16 +90,28 @@ class SmartPager:
         
         # Use Rich's JSON syntax highlighting
         try:
-            # Create syntax object but extract just the text with styles
-            syntax = Syntax(line, "json", theme="monokai", line_numbers=False, background_color=None)
-            # For now, just return styled text - Rich will handle the coloring
-            return Text(line, style="bright_green")
+            # Extract just the JSON part for highlighting
+            json_part = self._extract_json_from_line(line)
+            if json_part and json_part != line.strip():
+                # Line has text before/after JSON - highlight each part
+                before = line[:line.find(json_part)]
+                after = line[line.find(json_part) + len(json_part):]
+                
+                text.append(before, style="dim white")
+                text.append(json_part, style="bright_green")
+                text.append(after, style="dim white")
+            else:
+                # Whole line is JSON
+                text.append(line, style="bright_green")
         except:
-            return Text(line, style="green")
+            text.append(line, style="green")
+        
+        return text
     
     def _format_line(self, line_num: int, line: str) -> Text:
         """Format a line with appropriate styling."""
         is_json, parsed_json = self._is_json_line(line)
+        looks_like_json = self._looks_like_json(line)
         is_current = line_num == self.current_line
         
         # Create base text
@@ -85,7 +125,7 @@ class SmartPager:
         if is_json:
             # Colorize JSON
             text.append(self._colorize_json(line))
-        elif self._looks_like_json(line):
+        elif looks_like_json:
             # Invalid JSON that looks like JSON
             text.append("⚠ ", style="red")
             text.append(line, style="dim red")
@@ -166,13 +206,14 @@ class SmartPager:
         if self.lines:
             current_line_text = self.lines[self.current_line]
             is_json, _ = self._is_json_line(current_line_text)
+            looks_like_json = self._looks_like_json(current_line_text)
             
             if is_json:
                 if self.expanded_line == self.current_line:
                     status.append("[JSON - Expanded] ", style="green")
                 else:
                     status.append("[JSON - Press Enter to expand] ", style="cyan")
-            elif self._looks_like_json(current_line_text):
+            elif looks_like_json:
                 status.append("[Invalid JSON] ", style="red")
         
         status.append("Press 'q' to quit, 'j/k' to move, 'gg/G' for top/bottom", style="dim")

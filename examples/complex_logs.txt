@@ -1,0 +1,16 @@
+2024-05-26 08:00:00 INFO Application starting up
+{"timestamp": "2024-05-26T08:00:01Z", "level": "INFO", "service": "auth", "message": "Authentication service initialized", "version": "1.2.3", "config": {"port": 8080, "ssl": true}}
+2024-05-26 08:00:02 DEBUG Loading configuration from /etc/app/config.yaml
+{"timestamp": "2024-05-26T08:00:03Z", "level": "DEBUG", "service": "database", "message": "Connection pool initialized", "pool_size": 10, "connections": [{"id": 1, "host": "db1.example.com", "status": "active"}, {"id": 2, "host": "db2.example.com", "status": "standby"}]}
+2024-05-26 08:00:04 WARN Configuration file has deprecated options
+{"timestamp": "2024-05-26T08:00:05Z", "level": "ERROR", "service": "cache", "message": "Redis connection failed", "error": {"type": "ConnectionError", "details": "Could not connect to Redis at redis://localhost:6379", "stack_trace": ["File main.py line 42", "File redis_client.py line 15"]}, "retry_attempt": 1}
+Some random log line without JSON content
+2024-05-26 08:00:06 INFO Retrying Redis connection...
+{"timestamp": "2024-05-26T08:00:07Z", "level": "INFO", "service": "cache", "message": "Redis connection successful", "connection_info": {"host": "localhost", "port": 6379, "db": 0, "pool_size": 5}}
+This line has malformed JSON: {"incomplete": true, "missing_quote: "oops"}
+2024-05-26 08:00:08 INFO Processing user requests
+{"timestamp": "2024-05-26T08:00:09Z", "level": "INFO", "service": "api", "message": "Request processed", "request": {"method": "POST", "path": "/api/users", "headers": {"content-type": "application/json", "authorization": "Bearer ***"}, "body": {"username": "john_doe", "email": "john@example.com"}}, "response": {"status": 201, "body": {"id": 12345, "username": "john_doe", "created_at": "2024-05-26T08:00:09Z"}}, "duration_ms": 45}
+[{"type": "array_json", "items": [1, 2, 3]}, {"nested": {"deeply": {"nested": {"value": "found"}}}}]
+2024-05-26 08:00:10 ERROR Critical system error occurred
+{"timestamp": "2024-05-26T08:00:11Z", "level": "CRITICAL", "service": "system", "message": "Out of memory", "system_info": {"memory": {"total": "8GB", "used": "7.8GB", "available": "200MB"}, "cpu": {"cores": 4, "usage": 95.2}, "disk": {"root": {"total": "100GB", "used": "85GB", "free": "15GB"}}}}
+Regular log line at the end

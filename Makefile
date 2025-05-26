@@ -1,4 +1,4 @@
-.PHONY: install test clean run
+.PHONY: install test clean run demo
 
 # Variables
 PYTHON = python3
@@ -12,7 +12,7 @@ help:
 	@echo "Smart Pager Development Commands:"
 	@echo "  make setup    - Create virtual environment and install dependencies"
 	@echo "  make test     - Run all tests"
-	@echo "  make run      - Run with example file"
+	@echo "  make demo     - Run with example files"
 	@echo "  make install  - Install package in development mode"
 	@echo "  make clean    - Clean up generated files"
 
@@ -26,14 +26,25 @@ setup:
 install: setup
 	$(PIP) install -e .
 
-# Run tests
+# Run all tests
 test:
+	@echo "Running basic tests..."
 	$(PYTHON_VENV) test_basic.py
+	@echo "\nRunning render tests..."
 	$(PYTHON_VENV) test_render.py
+	@echo "\nRunning complex file tests..."
+	$(PYTHON_VENV) test_complex.py
+	@echo "\nRunning comprehensive feature tests..."
+	$(PYTHON_VENV) test_features.py
+	@echo "\n✅ All tests passed!"
 
-# Run with example file
-run:
-	$(PYTHON_VENV) smart_pager.py examples/sample_logs.txt
+# Demo with example files
+demo:
+	@echo "Demo 1: Simple logs"
+	@echo "Run: $(PYTHON_VENV) smart_pager.py examples/sample_logs.txt"
+	@echo "\nDemo 2: Complex logs"  
+	@echo "Run: $(PYTHON_VENV) smart_pager.py examples/complex_logs.txt"
+	@echo "\nPress 'q' to quit, 'j/k' to navigate, Enter to expand JSON"
 
 # Clean up
 clean:
@@ -49,3 +60,7 @@ clean:
 format:
 	$(PIP) install black
 	$(VENV_BIN)/black smart_pager/ *.py
+
+# Quick run with sample file
+run:
+	$(PYTHON_VENV) smart_pager.py examples/sample_logs.txt
