@@ -2,11 +2,9 @@
 
 import sys
 from pathlib import Path
-import time
 import os
 
 from rich.console import Console
-from rich.live import Live
 
 from .pager import SmartPager
 from .input_handler import InputHandler
@@ -27,23 +25,28 @@ def main():
         console.print(f"File not found: {filename}", style="red")
         sys.exit(1)
     
-    # Create pager
+    # Create pager and console
     pager = SmartPager(filename)
     console = Console()
     
+    # Save terminal state
+    original_settings = None
     try:
-        # Use alternative screen and manual clearing to avoid Live issues
-        print("\x1b[?1049h")  # Enter alternative screen
-        print("\x1b[2J")      # Clear screen
-        print("\x1b[H")       # Move to top
+        # Enter alternate screen
+        console.print("\x1b[?1049h", end="")
         
-        # Initial render
-        console.print(pager.render())
+        def refresh_display():
+            """Refresh the display."""
+            console.print("\x1b[H", end="")  # Move to top
+            console.print(pager.render())
+        
+        # Initial display
+        refresh_display()
         
         with InputHandler() as input_handler:
             while True:
                 try:
-                    key = input_handler.get_key(timeout=0.2)
+                    key = input_handler.get_key(timeout=0.1)
                     
                     if key is None:
                         continue
@@ -53,39 +56,41 @@ def main():
                         break
                     elif key == 'j' or key == '\x1b[B':  # j or down arrow
                         pager.move_down()
+                        refresh_display()
                     elif key == 'k' or key == '\x1b[A':  # k or up arrow  
                         pager.move_up()
+                        refresh_display()
                     elif key == 'g':
                         # Handle 'gg' for top - wait for second 'g'
                         next_key = input_handler.get_key(timeout=0.5)
                         if next_key == 'g':
                             pager.move_to_top()
+                            refresh_display()
                     elif key.upper() == 'G':
                         pager.move_to_bottom()
+                        refresh_display()
                     elif key == '\x04':  # Ctrl+D
                         pager.page_down()
+                        refresh_display()
                     elif key == '\x15':  # Ctrl+U
                         pager.page_up()
+                        refresh_display()
                     elif key in ['\n', '\r', ' ']:  # Enter or Space
                         pager.toggle_expansion()
-                    
-                    # Clear and re-render
-                    print("\x1b[2J")      # Clear screen
-                    print("\x1b[H")       # Move to top
-                    console.print(pager.render())
-                    
+                        refresh_display()
+                        
                 except KeyboardInterrupt:
                     break
                 except Exception as e:
-                    # Handle any other errors gracefully
-                    continue
+                    # Show error and continue
+                    console.print(f"\x1b[H[red]Error: {e}[/red]")
+                    refresh_display()
                     
     except Exception as e:
-        console = Console()
-        console.print(f"Error: {e}", style="red")
+        console.print(f"Fatal error: {e}", style="red")
     finally:
         # Always restore normal screen
-        print("\x1b[?1049l")  # Exit alternative screen
+        console.print("\x1b[?1049l", end="")
 
 
 if __name__ == "__main__":
