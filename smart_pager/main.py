@@ -29,15 +29,14 @@ def main():
     pager = SmartPager(filename)
     console = Console()
     
-    # Save terminal state
-    original_settings = None
     try:
         # Enter alternate screen
         console.print("\x1b[?1049h", end="")
         
         def refresh_display():
             """Refresh the display."""
-            console.print("\x1b[H", end="")  # Move to top
+            # Clear screen and move to top-left
+            console.print("\x1b[2J\x1b[H", end="")
             console.print(pager.render())
         
         # Initial display
@@ -83,7 +82,8 @@ def main():
                     break
                 except Exception as e:
                     # Show error and continue
-                    console.print(f"\x1b[H[red]Error: {e}[/red]")
+                    console.print("\x1b[2J\x1b[H", end="")
+                    console.print(f"[red]Error: {e}[/red]")
                     refresh_display()
                     
     except Exception as e:
