@@ -1,0 +1,9 @@
+2024-05-26 10:15:23 INFO Starting application
+{"timestamp": "2024-05-26T10:15:24Z", "level": "INFO", "message": "User authentication successful", "user_id": 12345, "session": "abc-def-123"}
+2024-05-26 10:15:25 DEBUG Regular log line without JSON
+{"timestamp": "2024-05-26T10:15:26Z", "level": "ERROR", "message": "Database connection failed", "error": {"code": 500, "details": "Connection timeout after 30s"}, "retry_count": 3}
+2024-05-26 10:15:27 WARN This line has invalid JSON: {incomplete: "json"
+{"timestamp": "2024-05-26T10:15:28Z", "level": "INFO", "message": "Processing batch", "batch_id": "batch_001", "items": [{"id": 1, "status": "complete"}, {"id": 2, "status": "pending"}], "total_items": 2}
+2024-05-26 10:15:29 INFO Another regular log line
+{"timestamp": "2024-05-26T10:15:30Z", "level": "DEBUG", "message": "Cache hit", "key": "user:12345", "ttl": 3600}
+Normal log line at the end
