@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 import time
+import os
 
 from rich.console import Console
 from rich.live import Live
@@ -31,54 +32,60 @@ def main():
     console = Console()
     
     try:
-        # Use a lower refresh rate to reduce flickering
-        with Live(pager.render(), refresh_per_second=2, screen=True, console=console) as live:
-            with InputHandler() as input_handler:
-                # Give initial render time to settle
-                time.sleep(0.1)
-                live.update(pager.render())
-                
-                while True:
-                    try:
-                        key = input_handler.get_key(timeout=0.2)
-                        
-                        if key is None:
-                            continue
-                            
-                        # Handle vim-like navigation
-                        if key.lower() == 'q' or key == '\x03':  # q or Ctrl+C
-                            break
-                        elif key == 'j' or key == '\x1b[B':  # j or down arrow
-                            pager.move_down()
-                        elif key == 'k' or key == '\x1b[A':  # k or up arrow  
-                            pager.move_up()
-                        elif key == 'g':
-                            # Handle 'gg' for top - wait for second 'g'
-                            next_key = input_handler.get_key(timeout=0.5)
-                            if next_key == 'g':
-                                pager.move_to_top()
-                        elif key.upper() == 'G':
-                            pager.move_to_bottom()
-                        elif key == '\x04':  # Ctrl+D
-                            pager.page_down()
-                        elif key == '\x15':  # Ctrl+U
-                            pager.page_up()
-                        elif key in ['\n', '\r', ' ']:  # Enter or Space
-                            pager.toggle_expansion()
-                        
-                        # Update display after any key press
-                        live.update(pager.render())
-                        
-                    except KeyboardInterrupt:
-                        break
-                    except Exception as e:
-                        # Handle any other errors gracefully
+        # Use alternative screen and manual clearing to avoid Live issues
+        print("\x1b[?1049h")  # Enter alternative screen
+        print("\x1b[2J")      # Clear screen
+        print("\x1b[H")       # Move to top
+        
+        # Initial render
+        console.print(pager.render())
+        
+        with InputHandler() as input_handler:
+            while True:
+                try:
+                    key = input_handler.get_key(timeout=0.2)
+                    
+                    if key is None:
                         continue
                         
+                    # Handle vim-like navigation
+                    if key.lower() == 'q' or key == '\x03':  # q or Ctrl+C
+                        break
+                    elif key == 'j' or key == '\x1b[B':  # j or down arrow
+                        pager.move_down()
+                    elif key == 'k' or key == '\x1b[A':  # k or up arrow  
+                        pager.move_up()
+                    elif key == 'g':
+                        # Handle 'gg' for top - wait for second 'g'
+                        next_key = input_handler.get_key(timeout=0.5)
+                        if next_key == 'g':
+                            pager.move_to_top()
+                    elif key.upper() == 'G':
+                        pager.move_to_bottom()
+                    elif key == '\x04':  # Ctrl+D
+                        pager.page_down()
+                    elif key == '\x15':  # Ctrl+U
+                        pager.page_up()
+                    elif key in ['\n', '\r', ' ']:  # Enter or Space
+                        pager.toggle_expansion()
+                    
+                    # Clear and re-render
+                    print("\x1b[2J")      # Clear screen
+                    print("\x1b[H")       # Move to top
+                    console.print(pager.render())
+                    
+                except KeyboardInterrupt:
+                    break
+                except Exception as e:
+                    # Handle any other errors gracefully
+                    continue
+                    
     except Exception as e:
         console = Console()
         console.print(f"Error: {e}", style="red")
-        sys.exit(1)
+    finally:
+        # Always restore normal screen
+        print("\x1b[?1049l")  # Exit alternative screen
 
 
 if __name__ == "__main__":

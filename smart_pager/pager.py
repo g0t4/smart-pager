@@ -28,15 +28,14 @@ class SmartPager:
         # Load file first
         self._load_file()
         
-        # Calculate terminal height after loading, and be more conservative
+        # Calculate terminal height after loading
         self._update_terminal_size()
         
     def _update_terminal_size(self):
         """Update terminal size calculations."""
         console_size = self.console.size
-        # Be more conservative with height calculation
-        # Account for panel borders (2), status line (1), and some buffer (2)
-        self.terminal_height = max(5, console_size.height - 5)
+        # More conservative calculation: leave room for panel borders + status + buffer
+        self.terminal_height = max(5, console_size.height - 6)
         
     def _load_file(self):
         """Load file content into memory."""
@@ -176,8 +175,8 @@ class SmartPager:
         self.scroll_offset = max(0, min(self.scroll_offset, 
                                       max(0, len(self.lines) - self.terminal_height)))
     
-    def _render_content(self) -> Panel:
-        """Render the main content panel."""
+    def _render_content(self) -> Text:
+        """Render just the content without panel wrapper."""
         # Update terminal size in case it changed
         self._update_terminal_size()
         self._update_scroll_offset()
@@ -206,13 +205,7 @@ class SmartPager:
                 content.append("\n")
             content.append(line)
         
-        return Panel(
-            content,
-            title=f"Smart Pager - {Path(self.filename).name}",
-            box=box.ROUNDED,
-            title_align="left",
-            height=self.terminal_height + 2  # +2 for panel borders
-        )
+        return content
     
     def _render_status(self) -> Text:
         """Render status line."""
@@ -298,8 +291,19 @@ class SmartPager:
     def render(self):
         """Render the complete interface."""
         layout = Layout()
+        
+        # Create panel with dynamic sizing
+        content = self._render_content()
+        main_panel = Panel(
+            content,
+            title=f"Smart Pager - {Path(self.filename).name}",
+            box=box.ROUNDED,
+            title_align="left"
+            # Remove explicit height - let it size naturally
+        )
+        
         layout.split_column(
-            Layout(self._render_content(), name="main"),
+            Layout(main_panel, name="main"),
             Layout(self._render_status(), name="status", size=1)
         )
         return layout
